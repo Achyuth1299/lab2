@@ -1,0 +1,35 @@
+from mrjob.job import MRJob
+import re
+
+class MRInvertedIndex(MRJob):
+
+    def configure_args(self):
+        super(MRInvertedIndex, self).configure_args()
+        self.add_passthru_arg('--documents', help='Path to the document file')
+
+    def mapper_init(self):
+        self.doc_id = 0
+
+    def mapper(self, _, line):
+        # Get the document identifier from the filename
+        self.doc_id += 1
+
+        # Split the input text into words
+        words = re.findall(r'\w+', line.lower())
+        
+        # Emit each word as a key and the document identifier as the value
+        for word in words:
+            yield (word, self.doc_id)
+
+    def reducer(self, word, doc_ids):
+        # Remove duplicates from the list of document identifiers to get the unique list of documents
+        documents = list(set(doc_ids))
+        
+        # Sort the documents list to maintain a consistent order
+        documents.sort()
+        
+        # Yield the word and its associated documents as the final output
+        yield (word, documents)
+
+if __name__ == '__main__':
+    MRInvertedIndex.run()
